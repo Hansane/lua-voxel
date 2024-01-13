@@ -5,80 +5,76 @@ local triangle = require('src.triangle')
 local vector3 = require('src.vector3')
 local color = require('src.color')
 
+local engine = require('src.engine')
+
 require('src.debug')
 
----@type table<number, triangle>
-local triangles = {}
-
-local camera = vector3.new(0,0,-100)
+local sounds = {}
 
 function love.load()
-    triangles = create_debug_cube();
+    love.mouse.setRelativeMode(true)
+    -- love.mouse.setVisible(false)
+    -- love.mouse.setGrabbed(true)
+    love.window.setMode(800,600)
+    local width, height = love.graphics.getDimensions()
+
+    engine.setViewSize(width, height)
+    engine.loadTriangles(create_debug_cube())
+
+    
+    sounds.music = love.audio.newSource("sounds/ambient-piano.mp3", "stream")
+
+    sounds.music:setVolume(0.01)
+    sounds.music:play()
 end
 
 function love.update(dt)
-    
+
+    if love.keyboard.isDown('escape') then
+        love.window.close()
+    end
+
+    if love.keyboard.isDown('up') then
+        engine.moveCamera(vector3.new(0, 8 * dt, 0))
+    end
+
+    if love.keyboard.isDown('down') then
+        engine.moveCamera(vector3.new(0, -8 * dt, 0))
+    end
+
+    if love.keyboard.isDown('left') then
+        engine.moveCamera(vector3.new(-8 * dt, 0, 0))
+    end
+
+    if love.keyboard.isDown('right') then
+        engine.moveCamera(vector3.new(8 * dt, 0, 0))
+    end
+
+    local forward = lookDirection * (8 * dt)
+
+    if love.keyboard.isDown('w') then
+        engine.moveCamera(forward)
+    end
+
+    if love.keyboard.isDown('s') then
+        engine.moveCamera(-forward)
+    end
+
+    if love.keyboard.isDown('a') then
+        engine.turnCamera(2 * dt)
+    end
+
+    if love.keyboard.isDown('d') then
+        engine.turnCamera(-2 * dt)
+    end
 end
 
-local angle = 0.01;
-
-local function connect_point(point1, point2)
-    love.graphics.line(point1.x + 200, point1.y + 200, point2.x + 200, point2.y + 200)
+function love.mousemoved(x, y, dx, dy, isTouch)
+    engine.turnCamera(-dx * 0.001)
 end
+
 
 function love.draw()
-
-    ---@type table<number, triangle>
-    local translated_triangles = {}
-
-    for key, tri in pairs(triangles) do
-        local translated_points = {}
-        for key, point in pairs(tri.points) do
-            local rotated_point = matrix_multiply(create_matrix_rotation_x(angle), point)
-            rotated_point = matrix_multiply(create_matrix_rotation_y(angle), rotated_point)
-            rotated_point = matrix_multiply(create_matrix_rotation_z(angle), rotated_point)
-
-
-
-            table.insert(translated_points, rotated_point)
-        end
-        table.insert(translated_triangles, triangle.new(translated_points[1], translated_points[2], translated_points[3], tri.color))
-    end
-
-    local projected_triangles = {}
-
-    for key, tri in pairs(translated_triangles) do
-
-        local normal = tri:normal()
-
-        ---vector3.dot_product(normal, tri.points[1] - camera)
-
-        if vector3.dot_product(normal, tri.points[1] - camera) < 0 then
-
-
-            -- tri.points[1] = matrix_multiply(create_matrix_perspective(2,tri.points[1].z), tri.points[1]) * 200 + vector3.new(200,200,0)
-            -- tri.points[2] = matrix_multiply(create_matrix_perspective(2,tri.points[2].z), tri.points[2]) * 200 + vector3.new(200,200,0)
-            -- tri.points[3] = matrix_multiply(create_matrix_perspective(2,tri.points[3].z), tri.points[3]) * 200 + vector3.new(200,200,0)
-
-            tri.points[1] = tri.points[1] * 200 + vector3.new(200,200,0)
-            tri.points[2] = tri.points[2] * 200 + vector3.new(200,200,0)
-            tri.points[3] = tri.points[3] * 200 + vector3.new(200,200,0)
-            
-            -- local projection = create_matrix_projection(90, 1, 0.1, 1000)
-
-            -- tri.points[1] = matrix_multiply(projection, tri.points[1]) * 200 + vector3.new(200,200,0)
-            -- tri.points[2] = matrix_multiply(projection, tri.points[2]) * 200 + vector3.new(200,200,0)
-            -- tri.points[3] = matrix_multiply(projection, tri.points[3]) * 200 + vector3.new(200,200,0)
-
-            table.insert(projected_triangles, tri)
-        end
-
-    end
-
-    for key, tri in pairs(projected_triangles) do
-        tri:draw()
-    end
-
-    angle = angle + 0.005
+    engine.draw()
 end
 

@@ -2,6 +2,7 @@
 ---@field x number
 ---@field y number
 ---@field z number
+---@field w number
 
 -- vector metatable:
 local vector3 = {}
@@ -24,6 +25,16 @@ end
 ---@param z number
 function vector3.new(x, y, z)
   local self = setmetatable({x = x or 0, y = y or 0, z = z or 0}, vector3)
+  self.w = 0
+  
+  return self
+end
+
+---@return vector3
+---@param v vector3
+function vector3.copy(v)
+  local self = setmetatable({x = v.x or 0, y = v.y or 0, z = v.z or 0}, vector3)
+  self.w = v.w
   
   return self
 end
@@ -33,8 +44,8 @@ end
 ---@param b vector3
 function vector3.cross_product(a, b)
   local nx = a.y * b.z - a.z * b.y
-  local ny = a.x * b.z - a.z * b.x
-  local nz = a.y * b.x - a.x * b.y
+  local ny = a.z * b.x - a.x * b.z
+  local nz = a.x * b.y - a.y * b.x
 
   return vector3.new(nx,ny,nz)
 end
