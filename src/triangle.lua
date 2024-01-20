@@ -4,6 +4,7 @@
 
 require('src.debug')
 local vector3 = require('src.vector3')
+local geometry = require('src.geometry')
 local c = require('src.color')
 local matrix = require('src.matrix')
 
@@ -53,6 +54,84 @@ function triangle.newDefault()
     return self
 end
 
+---@param planePos vector3
+---@param planeNormal vector3
+function triangle:clip_against_plane(planePos, planeNormal)
+    local outTri1 = triangle.newDefault()
+    local outTri2 = triangle.newDefault()
+    
+    planeNormal = planeNormal:normalize()
+
+    local function dist(p)
+        return planeNormal.x * p.x + planeNormal.y * p.y + planeNormal.z * p.z - vector3.dot_product(planeNormal, planePos)
+    end
+    
+    ---@type table<number, vector3>
+    local insidePoints = {}
+    local insidePointsCount = 0
+    ---@type table<number, vector3>
+    local outsidePoints = {}
+    local outsidePointsCount = 0
+
+    -- TODO: Texture
+
+    ---@type table<number, number>
+    local distances = {}
+
+    distances[1] = dist(self.points[1])
+    distances[2] = dist(self.points[2])
+    distances[3] = dist(self.points[3])
+
+    for i = 1, 3, 1 do
+        if distances[i] >= 0 then
+            insidePointsCount = insidePointsCount + 1
+            insidePoints[insidePointsCount] = self.points[i]
+        else
+            outsidePointsCount = outsidePointsCount + 1
+            outsidePoints[outsidePointsCount] = self.points[i]
+        end
+    end
+
+    if insidePointsCount == 0 then
+        return 0
+    end
+
+    if insidePointsCount == 3 then
+        outTri1 = triangle.copy(self)
+        return 1, outTri1
+    end
+
+    if insidePointsCount == 1 and outsidePointsCount == 2 then
+        outTri1.color = self.color
+
+        outTri1.points[1] = insidePoints[1]
+
+        local outPoint2, t = geometry.intersect_plane(planePos, planeNormal, insidePoints[1], outsidePoints[1])
+        outTri1.points[2] = outPoint2
+
+        local outPoint3, t = geometry.intersect_plane(planePos, planeNormal, insidePoints[1], outsidePoints[2])
+        outTri1.points[3] = outPoint3
+
+        return 1, outTri1
+    end
+
+    if(insidePointsCount == 2 and outsidePointsCount == 1) then
+        outTri1.color = self.color
+        outTri2.color = self.color
+
+        outTri1.points[1] = insidePoints[1]
+        outTri1.points[2] = insidePoints[2]
+        outTri1.points[3] = geometry.intersect_plane(planePos, planeNormal, insidePoints[1], outsidePoints[1])
+
+        outTri2.points[1] = insidePoints[2]
+        outTri2.points[2] = vector3.copy(outTri1.points[3])
+        outTri2.points[3] = geometry.intersect_plane(planePos, planeNormal, insidePoints[2], outsidePoints[1])
+
+        return 2, outTri1, outTri2
+    end
+
+    return 0
+end
 
 ---@return vector3
 function triangle:normal()
